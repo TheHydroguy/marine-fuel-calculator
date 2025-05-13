@@ -119,3 +119,83 @@ with tab3:
         template="plotly_white"
     )
     st.plotly_chart(fig3, use_container_width=True)
+
+from pathlib import Path
+
+module2_code = """
+import numpy as np
+import pandas as pd
+import streamlit as st
+import plotly.graph_objects as go
+
+# -------------------------------
+# Ship Specs & Policy Parameters
+# -------------------------------
+st.markdown("## ⚙️ Module 2: Switch or Pay Strategy (IMO 2028)")
+ship_power = st.number_input("Ship Power (MW)", value=60.0, min_value=1.0)
+operation_hours = st.number_input("Operation Hours per Day", value=24, min_value=1, max_value=24)
+ci_reduction = st.slider("CI Reduction Target (%)", min_value=0, max_value=40, value=4, step=1)
+carbon_fee = st.number_input("Carbon Fee ($/ton CO₂)", value=380, step=10)
+
+# -------------------------------
+# Fuel Data (CI, LHV, Price, CapEx, Infra)
+# -------------------------------
+fuel_data = {
+    "VLSFO": {"LHV": 42.7, "Price": 650, "CI": 91, "CapEx": 0, "Infra": 0},
+    "Green Methanol": {"LHV": 20, "Price": 950, "CI": 10, "CapEx": 10_000_000, "Infra": 5000},
+    "Green Ammonia": {"LHV": 18.6, "Price": 1200, "CI": 5, "CapEx": 15_000_000, "Infra": 18000},
+    "Green Hydrogen (FC)": {"LHV": 120, "Price": 4500, "CI": 3, "CapEx": 25_000_000, "Infra": 22000, "eff": 0.55},
+}
+
+# -------------------------------
+# Constants
+# -------------------------------
+baseline_CI = 93.3
+ci_target = baseline_CI * (1 - ci_reduction / 100)
+energy_MJ_day = ship_power * 1e3 * operation_hours
+discount_rate = 0.08
+lifetime_years = 20
+days_per_year = 365
+
+# -------------------------------
+# Calculation Function
+# -------------------------------
+def calculate_fuel_row(name, props):
+    eff = props.get("eff", 1.0)
+    burn = energy_MJ_day / (props["LHV"] * 1e3 * eff)
+    fuel_cost = burn * props["Price"]
+    emissions = energy_MJ_day * props["CI"] / 1e6
+    excess_CI = max(props["CI"] - ci_target, 0)
+    excess_CO2 = excess_CI * energy_MJ_day / 1e6
+    fee = excess_CO2 * carbon_fee
+    capex_day = (props["CapEx"] * discount_rate) / (1 - (1 + discount_rate) ** (-lifetime_years)) / days_per_year
+    total_cost = fuel_cost + fee + capex_day + props["Infra"]
+    return {
+        "Fuel": name,
+        "Burn Rate (t/day)": round(burn, 2),
+        "Fuel Cost ($/day)": round(fuel_cost, 0),
+        "Carbon Fee ($/day)": round(fee, 0),
+        "CapEx/day": round(capex_day, 0),
+        "Infra/day": round(props["Infra"], 0),
+        "Total Cost ($/day)": round(total_cost, 0),
+    }
+
+# -------------------------------
+# Calculate & Display
+# -------------------------------
+results = [calculate_fuel_row(name, props) for name, props in fuel_data.items()]
+df = pd.DataFrame(results)
+
+st.markdown(f"### 📊 CI Target: {ci_target:.2f} gCO₂e/MJ")
+st.dataframe(df.set_index("Fuel"))
+
+fig = go.Figure()
+fig.add_trace(go.Bar(x=df["Fuel"], y=df["Total Cost ($/day)"], name="Total Daily Cost"))
+fig.update_layout(title="Total Daily Operating Cost per Fuel", yaxis_title="$/day", template="plotly_white", height=400)
+st.plotly_chart(fig, use_container_width=True)
+"""
+
+file_path = Path("/mnt/data/module2_switch_or_pay.py")
+file_path.write_text(module2_code)
+file_path.name
+
