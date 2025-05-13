@@ -93,7 +93,7 @@ with tab1:
                 for f in fuel_data
             ]
         })
-        fig1, ax1 = plt.subplots(figsize=(6, 4))
+        fig1, ax1 = plt.subplots(figsize=(4, 2.5))
         ax1.barh(cost_df['Fuel'], cost_df['Daily Cost ($)'], color="#4e79a7")
         ax1.set_xlabel("$ per Day")
         ax1.set_title("Daily Cost by Fuel")
@@ -108,7 +108,7 @@ with tab2:
                 for f in fuel_data
             ]
         })
-        fig2, ax2 = plt.subplots(figsize=(6, 4))
+        fig2, ax2 = plt.subplots(figsize=(4, 2.5))
         ax2.barh(emissions_df['Fuel'], emissions_df['CO₂e Emissions (tons/day)'], color="#59a14f")
         ax2.set_xlabel("Tons CO₂e per Day")
         ax2.set_title("CO₂e Emissions by Fuel")
@@ -123,7 +123,7 @@ with tab3:
                 for f in fuel_data
             ]
         })
-        fig3, ax3 = plt.subplots(figsize=(6, 4))
+        fig3, ax3 = plt.subplots(figsize=(4, 2.5))
         ax3.barh(burn_df['Fuel'], burn_df['Burn Rate (tons/day)'], color="#f28e2b")
         ax3.set_xlabel("Tons per Day")
         ax3.set_title("Fuel Burn Rate by Type")
