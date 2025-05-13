@@ -1,7 +1,3 @@
-from pathlib import Path
-
-# Streamlit + Plotly Final Code (Cost Sensitivity with Clean Chart)
-final_code = """
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -22,7 +18,9 @@ fuel_data = {
     "FAME Biodiesel": {"LHV": 38, "Price": 1200, "CI": 35}
 }
 
+# ------------------------
 # Streamlit Interface
+# ------------------------
 st.set_page_config(page_title="Marine Fuel Cost & Emissions Calculator", layout="wide")
 st.title("🚢 Marine Fuel Cost & Emissions Calculator")
 
@@ -37,7 +35,9 @@ with col2:
 with col3:
     selected_fuel = st.selectbox("Select Fuel Type", list(fuel_data.keys()))
 
+# ------------------------
 # Core Calculations
+# ------------------------
 energy_MJ_day = ship_power * 1e3 * operation_hours
 fuel_LHV = fuel_data[selected_fuel]["LHV"]
 fuel_price = fuel_data[selected_fuel]["Price"]
@@ -47,7 +47,9 @@ burn_rate = energy_MJ_day / (fuel_LHV * 1e3)
 daily_cost = burn_rate * fuel_price
 daily_emissions = energy_MJ_day * fuel_CI / 1e6
 
-# Output Summary
+# ------------------------
+# Results Summary
+# ------------------------
 st.markdown("---")
 st.subheader("📊 Results Summary")
 col_a, col_b, col_c = st.columns(3)
@@ -56,10 +58,13 @@ col_b.metric("Daily Fuel Cost ($/day)", f"${daily_cost:,.0f}")
 col_c.metric("CO₂e Emissions (tons/day)", f"{daily_emissions:.2f}")
 st.markdown("---")
 
+# ------------------------
 # Plotly Cost Sensitivity Chart
+# ------------------------
 if st.button("Generate Cost Sensitivity Chart"):
     prices = np.linspace(200, 1200, 6)
     fig = go.Figure()
+
     for fuel in fuel_data:
         lhv = fuel_data[fuel]['LHV']
         burn = energy_MJ_day / (lhv * 1e3)
@@ -89,9 +94,3 @@ if st.button("Generate Cost Sensitivity Chart"):
         )
     )
     st.plotly_chart(fig, use_container_width=True)
-"""
-
-# Write file
-file_path = Path("/mnt/data/fuel_cost_plotly_app.py")
-file_path.write_text(final_code)
-file_path.name
