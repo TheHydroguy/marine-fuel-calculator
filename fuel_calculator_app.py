@@ -1,6 +1,3 @@
-from pathlib import Path
-
-full_app_with_stripe_locks = """
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -22,21 +19,18 @@ fuel_data = {
 }
 
 # ------------------------
-# Setup
+# Setup + Session Flags
 # ------------------------
 st.set_page_config(page_title="Marine Fuel App", layout="wide")
-st.sidebar.header("🛠️ Ship Specs")
-ship_power = st.sidebar.number_input("Ship Power (MW)", 1.0, 100.0, 60.0)
-operation_hours = st.sidebar.number_input("Hours per Day", 1, 24, 24)
-energy_MJ_day = ship_power * 1e3 * operation_hours
-
-# ------------------------
-# Session Control
-# ------------------------
 if "used_module_1" not in st.session_state:
     st.session_state["used_module_1"] = False
 if "used_module_2" not in st.session_state:
     st.session_state["used_module_2"] = False
+
+st.sidebar.header("🛠️ Ship Specs")
+ship_power = st.sidebar.number_input("Ship Power (MW)", 1.0, 100.0, 60.0)
+operation_hours = st.sidebar.number_input("Hours per Day", 1, 24, 24)
+energy_MJ_day = ship_power * 1e3 * operation_hours
 
 # ------------------------
 # Tabs
@@ -59,7 +53,6 @@ with tab1:
         selected_fuel = st.selectbox("Select Fuel", list(fuel_data.keys()))
         props = fuel_data[selected_fuel]
         eff = props.get("eff", 1.0)
-
         burn = energy_MJ_day / (props["LHV"] * 1e3 * eff)
         cost = burn * props["Price"]
         emissions = energy_MJ_day * props["CI"] / 1e6
@@ -69,7 +62,6 @@ with tab1:
         st.metric("CO₂e (tons/day)", f"{emissions:.2f}")
 
         tab1a, tab1b, tab1c = st.tabs(["💸 Cost Sensitivity", "🌍 Emissions", "⚙️ Burn Rate"])
-
         with tab1a:
             prices = np.linspace(200, 1200, 6)
             fig = go.Figure()
@@ -78,19 +70,19 @@ with tab1:
                 eff = fuel_data[f].get("eff", 1.0)
                 b = energy_MJ_day / (LHV * 1e3 * eff)
                 fig.add_trace(go.Scatter(x=prices, y=b * prices, mode='lines', name=f))
-            fig.update_layout(title="Daily Cost vs Fuel Price", xaxis_title="$/ton", yaxis_title="Total Cost ($)", height=400, template="plotly_white")
+            fig.update_layout(title="Daily Cost vs Fuel Price", xaxis_title="$/ton", yaxis_title="Total Cost ($)", height=400)
             st.plotly_chart(fig, use_container_width=True)
 
         with tab1b:
             em = {f: energy_MJ_day * fuel_data[f]["CI"] / 1e6 for f in fuel_data}
             fig2 = go.Figure([go.Bar(x=list(em.keys()), y=list(em.values()))])
-            fig2.update_layout(title="CO₂e Emissions by Fuel", yaxis_title="tons/day", height=400, template="plotly_white")
+            fig2.update_layout(title="CO₂e Emissions by Fuel", yaxis_title="tons/day", height=400)
             st.plotly_chart(fig2, use_container_width=True)
 
         with tab1c:
             br = {f: energy_MJ_day / (fuel_data[f]["LHV"] * 1e3 * fuel_data[f].get("eff", 1.0)) for f in fuel_data}
             fig3 = go.Figure([go.Bar(x=list(br.keys()), y=list(br.values()))])
-            fig3.update_layout(title="Burn Rate by Fuel", yaxis_title="tons/day", height=400, template="plotly_white")
+            fig3.update_layout(title="Burn Rate by Fuel", yaxis_title="tons/day", height=400)
             st.plotly_chart(fig3, use_container_width=True)
 
         st.session_state["used_module_1"] = True
@@ -110,14 +102,8 @@ with tab2:
     else:
         ci_reduction = st.slider("CI Reduction Target (%)", 0, 40, 4)
         carbon_fee = st.number_input("Carbon Fee ($/ton CO₂e)", value=380)
-
-        ci_baseline = 93.3
-        ci_target = ci_baseline * (1 - ci_reduction / 100)
+        ci_target = 93.3 * (1 - ci_reduction / 100)
         st.metric("📉 Tier 2 CI Limit", f"{ci_target:.2f} gCO₂e/MJ")
-
-        discount_rate = 0.08
-        lifetime = 20
-        days_per_year = 365
 
         def compute_costs(fuel_name, props):
             LHV = props["LHV"]
@@ -126,30 +112,22 @@ with tab2:
             price = props["Price"]
             capex = props.get("CapEx", 0)
             infra = props.get("Infra", 0)
-
             burn = energy_MJ_day / (LHV * 1e3 * eff)
             fuel_cost = burn * price
-
             excess_ci = max(CI - ci_target, 0)
-            excess_emissions = excess_ci * energy_MJ_day / 1e6
-            carbon_fee_cost = excess_emissions * carbon_fee
-
-            capex_day = (capex * discount_rate) / (1 - (1 + discount_rate) ** (-lifetime)) / days_per_year if capex > 0 else 0
-
-            total = fuel_cost + carbon_fee_cost + capex_day + infra
-
+            fee = (excess_ci * energy_MJ_day / 1e6) * carbon_fee
+            capex_day = (capex * 0.08) / (1 - (1 + 0.08) ** (-20)) / 365 if capex else 0
+            total = fuel_cost + fee + capex_day + infra
             return {
                 "Fuel": fuel_name,
                 "Fuel Cost ($/day)": fuel_cost,
-                "Carbon Fee ($/day)": carbon_fee_cost,
+                "Carbon Fee ($/day)": fee,
                 "CapEx/day ($)": capex_day,
                 "Infra/day ($)": infra,
                 "Total Cost ($/day)": total
             }
 
-        results = [compute_costs(f, p) for f, p in fuel_data.items()]
-        df = pd.DataFrame(results)
-
+        df = pd.DataFrame([compute_costs(f, p) for f, p in fuel_data.items()])
         st.dataframe(
             df.set_index("Fuel").style.format({
                 "Fuel Cost ($/day)": "${:,.0f}",
@@ -165,22 +143,15 @@ with tab2:
         fig.add_trace(go.Bar(x=df["Fuel"], y=df["Carbon Fee ($/day)"], name="Carbon Fee"))
         fig.add_trace(go.Bar(x=df["Fuel"], y=df["CapEx/day ($)"], name="CapEx"))
         fig.add_trace(go.Bar(x=df["Fuel"], y=df["Infra/day ($)"], name="Infra"))
-
         fig.update_layout(
             barmode="stack",
             title="💰 Daily Cost Breakdown by Fuel Type",
             xaxis_title="Fuel",
             yaxis_title="Total Cost ($/day)",
-            template="plotly_white",
             height=460,
+            template="plotly_white",
             legend=dict(orientation="h", y=-0.3, x=0.5, xanchor="center")
         )
         st.plotly_chart(fig, use_container_width=True)
 
         st.session_state["used_module_2"] = True
-"""
-
-# Save file
-path = Path("/mnt/data/full_app_with_stripe_locks.py")
-path.write_text(full_app_with_stripe_locks)
-path.name
