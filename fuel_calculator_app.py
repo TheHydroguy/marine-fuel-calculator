@@ -77,35 +77,70 @@ with tab1:
 # ------------------------
 # Module 2
 # ------------------------
+from pathlib import Path
+
+final_fixed_module2 = """
+# ------------------------
+# Module 2: Switch or Pay (Tier 2 Corrected)
+# ------------------------
 with tab2:
-    st.header("💥 Switch or Pay (IMO 2028)")
-    ci_reduction = st.slider("CI Reduction (%)", 0, 40, 4)
+    st.header("💥 Switch or Pay (IMO Tier 2 Enforcement)")
+    ci_reduction = st.slider("CI Reduction Target (%)", 0, 40, 4)
     carbon_fee = st.number_input("Carbon Fee ($/ton CO₂)", value=380)
     ci_target = 93.3 * (1 - ci_reduction / 100)
-    r, t, y = 0.08, 20, 365
+    discount_rate = 0.08
+    lifetime = 20
+    days_per_year = 365
 
-    def row(name, props):
+    def calc_costs(name, props):
         eff = props.get("eff", 1.0)
         burn = energy_MJ_day / (props["LHV"] * 1e3 * eff)
         fuel_cost = burn * props["Price"]
-        ci = props["CI"]
-        excess = max(ci - ci_target, 0)
-        fee = excess * energy_MJ_day / 1e6 * carbon_fee
+        excess_CI = max(props["CI"] - ci_target, 0)
+        fee = (excess_CI * energy_MJ_day / 1e6) * carbon_fee
         capex = props.get("CapEx", 0)
         infra = props.get("Infra", 0)
-        capex_day = (capex * r) / (1 - (1 + r) ** -t) / y
+        capex_day = (capex * discount_rate) / (1 - (1 + discount_rate) ** (-lifetime)) / days_per_year
         total = fuel_cost + fee + capex_day + infra
         return {
-            "Fuel": name, "Burn Rate": round(burn, 2),
-            "Fuel Cost": round(fuel_cost), "Fee": round(fee),
-            "CapEx/day": round(capex_day), "Infra/day": infra,
-            "Total Cost": round(total)
+            "Fuel": name,
+            "Fuel Cost ($/day)": round(fuel_cost),
+            "Carbon Fee ($/day)": round(fee),
+            "CapEx/day ($)": round(capex_day),
+            "Infra/day ($)": round(infra),
+            "Total Cost ($/day)": round(total)
         }
 
-    df = pd.DataFrame([row(f, p) for f, p in fuel_data.items()])
-    st.metric("CI Limit", f"{ci_target:.2f} gCO₂e/MJ")
-    st.dataframe(df.set_index("Fuel"))
+    results = [calc_costs(fuel, props) for fuel, props in fuel_data.items()]
+    df = pd.DataFrame(results)
+    st.metric("📉 Tier 2 CI Limit", f"{ci_target:.2f} gCO₂e/MJ")
+    st.dataframe(df.set_index("Fuel").style.format({
+        "Fuel Cost ($/day)": "${:,.0f}",
+        "Carbon Fee ($/day)": "${:,.0f}",
+        "CapEx/day ($)": "${:,.0f}",
+        "Infra/day ($)": "${:,.0f}",
+        "Total Cost ($/day)": "${:,.0f}"
+    }))
 
-    fig4 = go.Figure([go.Bar(x=df["Fuel"], y=df["Total Cost"], name="Total Cost")])
-    fig4.update_layout(title="Switch vs Pay: Total Daily Cost", yaxis_title="$/day", template="plotly_white", height=400)
-    st.plotly_chart(fig4, use_container_width=True)
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=df["Fuel"], y=df["Fuel Cost ($/day)"], name="Fuel Cost"))
+    fig.add_trace(go.Bar(x=df["Fuel"], y=df["Carbon Fee ($/day)"], name="Carbon Fee"))
+    fig.add_trace(go.Bar(x=df["Fuel"], y=df["CapEx/day ($)"], name="CapEx"))
+    fig.add_trace(go.Bar(x=df["Fuel"], y=df["Infra/day ($)"], name="Infra"))
+
+    fig.update_layout(
+        barmode="stack",
+        title="🧾 Cost Breakdown per Fuel (Daily $)",
+        xaxis_title="Fuel Type",
+        yaxis_title="$/day",
+        template="plotly_white",
+        legend=dict(orientation="h", y=-0.3, x=0.5, xanchor="center"),
+        height=450
+    )
+    st.plotly_chart(fig, use_container_width=True)
+"""
+
+path = Path("/mnt/data/fixed_module2_switch_or_pay.py")
+path.write_text(final_fixed_module2)
+path.name
+
