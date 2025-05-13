@@ -1,14 +1,10 @@
-from pathlib import Path
-
-# Final code combining untouched Module 1 with a separate new Module 2 tab
-final_combined_code = """
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
 # ------------------------
-# Fuel Properties Database
+# Fuel Properties
 # ------------------------
 fuel_data = {
     "VLSFO": {"LHV": 42.7, "Price": 650, "CI": 91},
@@ -23,28 +19,24 @@ fuel_data = {
 }
 
 # ------------------------
-# Streamlit App Configuration
+# Setup
 # ------------------------
-st.set_page_config(page_title="Marine Fuel App", layout="wide")
-
-# ------------------------
-# Shared Ship Specs
-# ------------------------
+st.set_page_config(page_title="Marine Fuel Tool", layout="wide")
 st.sidebar.header("🛠️ Ship Specs")
-ship_power = st.sidebar.number_input("Power (MW)", value=60.0)
-hours = st.sidebar.number_input("Hours/Day", value=24)
-energy_MJ_day = ship_power * 1e3 * hours
+ship_power = st.sidebar.number_input("Ship Power (MW)", 1.0, 100.0, 60.0)
+operation_hours = st.sidebar.number_input("Hours per Day", 1, 24, 24)
+energy_MJ_day = ship_power * 1e3 * operation_hours
 
 # ------------------------
-# Tabbed Modules
+# Tabs
 # ------------------------
 tab1, tab2 = st.tabs(["📊 Module 1: Fuel Calculator", "💥 Module 2: Switch or Pay"])
 
 # ------------------------
-# Module 1 (Preserved)
+# Module 1
 # ------------------------
 with tab1:
-    st.header("📊 Module 1: Fuel Cost & Emissions Calculator")
+    st.header("📊 Fuel Cost & Emissions Calculator")
     selected_fuel = st.selectbox("Select Fuel", list(fuel_data.keys()))
     props = fuel_data[selected_fuel]
     eff = props.get("eff", 1.0)
@@ -83,13 +75,13 @@ with tab1:
         st.plotly_chart(fig3, use_container_width=True)
 
 # ------------------------
-# Module 2 (Switch or Pay)
+# Module 2
 # ------------------------
 with tab2:
-    st.header("💥 Module 2: Switch or Pay (IMO 2028)")
-    reduction = st.slider("CI Reduction Target (%)", 0, 40, 4)
+    st.header("💥 Switch or Pay (IMO 2028)")
+    ci_reduction = st.slider("CI Reduction (%)", 0, 40, 4)
     carbon_fee = st.number_input("Carbon Fee ($/ton CO₂)", value=380)
-    ci_target = 93.3 * (1 - reduction / 100)
+    ci_target = 93.3 * (1 - ci_reduction / 100)
     r, t, y = 0.08, 20, 365
 
     def row(name, props):
@@ -117,9 +109,3 @@ with tab2:
     fig4 = go.Figure([go.Bar(x=df["Fuel"], y=df["Total Cost"], name="Total Cost")])
     fig4.update_layout(title="Switch vs Pay: Total Daily Cost", yaxis_title="$/day", template="plotly_white", height=400)
     st.plotly_chart(fig4, use_container_width=True)
-"""
-
-# Save to file
-merged_final_path = Path("/mnt/data/marine_fuel_full_app.py")
-merged_final_path.write_text(final_combined_code)
-merged_final_path.name
