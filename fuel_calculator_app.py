@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 # ------------------------
 # Fuel Properties Database
@@ -75,6 +76,55 @@ col_a, col_b, col_c = st.columns(3)
 col_a.metric(label="Fuel Burn Rate (tons/day)", value=f"{burn_rate:.2f}")
 col_b.metric(label="Daily Fuel Cost ($/day)", value=f"${daily_cost:,.0f}")
 col_c.metric(label="CO₂e Emissions (tons/day)", value=f"{daily_emissions:.2f}")
+
+st.markdown("---")
+
+# ------------------------
+# Visualization Tabs
+# ------------------------
+tab1, tab2, tab3 = st.tabs(["💸 Cost vs Fuel", "🌍 Emissions vs Fuel", "⚙️ Burn Rate vs Fuel"])
+
+with tab1:
+    st.subheader("Fuel Cost Comparison")
+    cost_df = pd.DataFrame({
+        'Fuel': list(fuel_data.keys()),
+        'Daily Cost ($)': [
+            (energy_MJ_day / (fuel_data[f]['LHV'] * 1e3)) * fuel_data[f]['Price']
+            for f in fuel_data
+        ]
+    })
+    fig1, ax1 = plt.subplots()
+    ax1.barh(cost_df['Fuel'], cost_df['Daily Cost ($)'], color="#4e79a7")
+    ax1.set_xlabel("$ per Day")
+    st.pyplot(fig1)
+
+with tab2:
+    st.subheader("CO₂e Emissions by Fuel")
+    emissions_df = pd.DataFrame({
+        'Fuel': list(fuel_data.keys()),
+        'CO₂e Emissions (tons/day)': [
+            energy_MJ_day * fuel_data[f]['CI'] / 1e6
+            for f in fuel_data
+        ]
+    })
+    fig2, ax2 = plt.subplots()
+    ax2.barh(emissions_df['Fuel'], emissions_df['CO₂e Emissions (tons/day)'], color="#59a14f")
+    ax2.set_xlabel("Tons CO₂e per Day")
+    st.pyplot(fig2)
+
+with tab3:
+    st.subheader("Burn Rate by Fuel")
+    burn_df = pd.DataFrame({
+        'Fuel': list(fuel_data.keys()),
+        'Burn Rate (tons/day)': [
+            energy_MJ_day / (fuel_data[f]['LHV'] * 1e3)
+            for f in fuel_data
+        ]
+    })
+    fig3, ax3 = plt.subplots()
+    ax3.barh(burn_df['Fuel'], burn_df['Burn Rate (tons/day)'], color="#f28e2b")
+    ax3.set_xlabel("Tons per Day")
+    st.pyplot(fig3)
 
 st.markdown("---")
 st.caption("Developed using Streamlit • Fuel prices and CI values reflect 2028 projections.")
