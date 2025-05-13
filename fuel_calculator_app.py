@@ -85,19 +85,20 @@ st.markdown("---")
 tab1, tab2, tab3 = st.tabs(["💸 Cost Chart", "🌍 Emissions Chart", "⚙️ Burn Rate Chart"])
 
 with tab1:
-    if st.button("Generate Cost Chart"):
-        cost_df = pd.DataFrame({
-            'Fuel': list(fuel_data.keys()),
-            'Daily Cost ($)': [
-                (energy_MJ_day / (fuel_data[f]['LHV'] * 1e3)) * fuel_data[f]['Price']
-                for f in fuel_data
-            ]
-        })
-        fig1, ax1 = plt.subplots(figsize=(4, 2.5))
-        ax1.barh(cost_df['Fuel'], cost_df['Daily Cost ($)'], color="#4e79a7")
-        ax1.set_xlabel("$ per Day")
-        ax1.set_title("Daily Cost by Fuel")
-        st.pyplot(fig1)
+    st.subheader("Daily Cost vs Fuel Price Sensitivity")
+    if st.button("Generate Cost Sensitivity Chart"):
+        prices = np.linspace(200, 1200, 6)
+        fig, ax = plt.subplots(figsize=(3, 1.8))
+        for fuel in fuel_data:
+            lhv = fuel_data[fuel]['LHV']
+            burn = energy_MJ_day / (lhv * 1e3)
+            daily_costs = burn * prices
+            ax.plot(prices, daily_costs, label=fuel)
+        ax.set_xlabel("Fuel Price ($/ton)")
+        ax.set_ylabel("Daily Cost ($)")
+        ax.set_title("Daily Cost vs Fuel Price")
+        ax.legend(fontsize=5, loc="upper left", bbox_to_anchor=(1,1))
+        st.pyplot(fig)
 
 with tab2:
     if st.button("Generate Emissions Chart"):
@@ -108,7 +109,7 @@ with tab2:
                 for f in fuel_data
             ]
         })
-        fig2, ax2 = plt.subplots(figsize=(4, 2.5))
+        fig2, ax2 = plt.subplots(figsize=(3, 1.8))
         ax2.barh(emissions_df['Fuel'], emissions_df['CO₂e Emissions (tons/day)'], color="#59a14f")
         ax2.set_xlabel("Tons CO₂e per Day")
         ax2.set_title("CO₂e Emissions by Fuel")
@@ -123,7 +124,7 @@ with tab3:
                 for f in fuel_data
             ]
         })
-        fig3, ax3 = plt.subplots(figsize=(4, 2.5))
+        fig3, ax3 = plt.subplots(figsize=(3, 1.8))
         ax3.barh(burn_df['Fuel'], burn_df['Burn Rate (tons/day)'], color="#f28e2b")
         ax3.set_xlabel("Tons per Day")
         ax3.set_title("Fuel Burn Rate by Type")
