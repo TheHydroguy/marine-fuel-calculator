@@ -65,23 +65,45 @@ tab1, tab2, tab3 = st.tabs(["💸 Cost Sensitivity", "🌍 Emissions", "⚙️ B
 
 # Tab 1 - Cost Sensitivity
 with tab1:
-    prices = np.linspace(200, 1200, 6)
-    fig = go.Figure()
+    st.subheader("Daily Cost Comparison at 3 Price Points ($/ton)")
+    price_levels = [400, 800, 1200]
+    data = []
+
     for fuel in fuel_data:
         lhv = fuel_data[fuel]['LHV']
         burn = energy_MJ_day / (lhv * 1e3)
-        daily_costs = burn * prices
-        fig.add_trace(go.Scatter(x=prices, y=daily_costs, mode='lines', name=fuel))
+        for price in price_levels:
+            data.append({
+                "Fuel": fuel,
+                "Price ($/ton)": f"${price}",
+                "Daily Cost ($)": burn * price
+            })
+
+    df = pd.DataFrame(data)
+
+    fig = go.Figure()
+
+    for price in price_levels:
+        subset = df[df["Price ($/ton)"] == f"${price}"]
+        fig.add_trace(go.Bar(
+            x=subset["Fuel"],
+            y=subset["Daily Cost ($)"],
+            name=f"${price}/ton",
+        ))
+
     fig.update_layout(
-        title="Daily Cost vs Fuel Price",
-        xaxis_title="Fuel Price ($/ton)",
+        barmode="group",
+        title="Daily Cost by Fuel at Different Price Points",
+        xaxis_title="Fuel",
         yaxis_title="Daily Cost ($)",
-        height=400,
-        width=700,
+        height=420,
+        width=720,
         template="plotly_white",
-        legend=dict(orientation="h", y=-0.3, x=0.5, xanchor="center", font=dict(size=9))
+        legend=dict(orientation="h", y=-0.3, x=0.5, xanchor="center", font=dict(size=10))
     )
+
     st.plotly_chart(fig, use_container_width=True)
+
 
 # Tab 2 - Emissions
 with tab2:
