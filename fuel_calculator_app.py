@@ -80,51 +80,54 @@ col_c.metric(label="CO₂e Emissions (tons/day)", value=f"{daily_emissions:.2f}"
 st.markdown("---")
 
 # ------------------------
-# Visualization Tabs
+# Visualization Tabs with Button Control
 # ------------------------
-tab1, tab2, tab3 = st.tabs(["💸 Cost vs Fuel", "🌍 Emissions vs Fuel", "⚙️ Burn Rate vs Fuel"])
+tab1, tab2, tab3 = st.tabs(["💸 Cost Chart", "🌍 Emissions Chart", "⚙️ Burn Rate Chart"])
 
 with tab1:
-    st.subheader("Fuel Cost Comparison")
-    cost_df = pd.DataFrame({
-        'Fuel': list(fuel_data.keys()),
-        'Daily Cost ($)': [
-            (energy_MJ_day / (fuel_data[f]['LHV'] * 1e3)) * fuel_data[f]['Price']
-            for f in fuel_data
-        ]
-    })
-    fig1, ax1 = plt.subplots()
-    ax1.barh(cost_df['Fuel'], cost_df['Daily Cost ($)'], color="#4e79a7")
-    ax1.set_xlabel("$ per Day")
-    st.pyplot(fig1)
+    if st.button("Generate Cost Chart"):
+        cost_df = pd.DataFrame({
+            'Fuel': list(fuel_data.keys()),
+            'Daily Cost ($)': [
+                (energy_MJ_day / (fuel_data[f]['LHV'] * 1e3)) * fuel_data[f]['Price']
+                for f in fuel_data
+            ]
+        })
+        fig1, ax1 = plt.subplots(figsize=(8, 5))
+        ax1.barh(cost_df['Fuel'], cost_df['Daily Cost ($)'], color="#4e79a7")
+        ax1.set_xlabel("$ per Day")
+        ax1.set_title("Daily Cost by Fuel")
+        st.pyplot(fig1)
 
 with tab2:
-    st.subheader("CO₂e Emissions by Fuel")
-    emissions_df = pd.DataFrame({
-        'Fuel': list(fuel_data.keys()),
-        'CO₂e Emissions (tons/day)': [
-            energy_MJ_day * fuel_data[f]['CI'] / 1e6
-            for f in fuel_data
-        ]
-    })
-    fig2, ax2 = plt.subplots()
-    ax2.barh(emissions_df['Fuel'], emissions_df['CO₂e Emissions (tons/day)'], color="#59a14f")
-    ax2.set_xlabel("Tons CO₂e per Day")
-    st.pyplot(fig2)
+    if st.button("Generate Emissions Chart"):
+        emissions_df = pd.DataFrame({
+            'Fuel': list(fuel_data.keys()),
+            'CO₂e Emissions (tons/day)': [
+                energy_MJ_day * fuel_data[f]['CI'] / 1e6
+                for f in fuel_data
+            ]
+        })
+        fig2, ax2 = plt.subplots(figsize=(8, 5))
+        ax2.barh(emissions_df['Fuel'], emissions_df['CO₂e Emissions (tons/day)'], color="#59a14f")
+        ax2.set_xlabel("Tons CO₂e per Day")
+        ax2.set_title("CO₂e Emissions by Fuel")
+        st.pyplot(fig2)
 
 with tab3:
-    st.subheader("Burn Rate by Fuel")
-    burn_df = pd.DataFrame({
-        'Fuel': list(fuel_data.keys()),
-        'Burn Rate (tons/day)': [
-            energy_MJ_day / (fuel_data[f]['LHV'] * 1e3)
-            for f in fuel_data
-        ]
-    })
-    fig3, ax3 = plt.subplots()
-    ax3.barh(burn_df['Fuel'], burn_df['Burn Rate (tons/day)'], color="#f28e2b")
-    ax3.set_xlabel("Tons per Day")
-    st.pyplot(fig3)
+    if st.button("Generate Burn Rate Chart"):
+        burn_df = pd.DataFrame({
+            'Fuel': list(fuel_data.keys()),
+            'Burn Rate (tons/day)': [
+                energy_MJ_day / (fuel_data[f]['LHV'] * 1e3)
+                for f in fuel_data
+            ]
+        })
+        fig3, ax3 = plt.subplots(figsize=(8, 5))
+        ax3.barh(burn_df['Fuel'], burn_df['Burn Rate (tons/day)'], color="#f28e2b")
+        ax3.set_xlabel("Tons per Day")
+        ax3.set_title("Fuel Burn Rate by Type")
+        st.pyplot(fig3)
 
 st.markdown("---")
 st.caption("Developed using Streamlit • Fuel prices and CI values reflect 2028 projections.")
