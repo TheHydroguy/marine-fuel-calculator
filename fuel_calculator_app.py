@@ -4,7 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 
 # ------------------------
-# Fuel Properties Database
+# Fuel Properties Database (Green Hydrogen renamed)
 # ------------------------
 fuel_data = {
     "VLSFO": {"LHV": 42.7, "Price": 650, "CI": 91},
@@ -12,8 +12,8 @@ fuel_data = {
     "Green Methanol": {"LHV": 20, "Price": 950, "CI": 10},
     "Gray Ammonia": {"LHV": 18.6, "Price": 700, "CI": 90},
     "Green Ammonia": {"LHV": 18.6, "Price": 1200, "CI": 5},
-    "Gray Hydrogen": {"LHV": 120, "Price": 3800, "CI": 90},
-    "Green Hydrogen": {"LHV": 120, "Price": 4500, "CI": 3},
+    "Gray Hydrogen": {"LHV": 120, "Price": 3800, "CI": 90, "eff": 0.55},
+    "Green Hydrogen (Fuel Cell)": {"LHV": 120, "Price": 4500, "CI": 3, "eff": 0.55},
     "B30 Blend": {"LHV": 40.1, "Price": 800, "CI": 82.2},
     "FAME Biodiesel": {"LHV": 38, "Price": 1200, "CI": 35}
 }
@@ -39,13 +39,12 @@ with col3:
 # Calculations
 # ------------------------
 energy_MJ_day = ship_power * 1e3 * operation_hours
-fuel_LHV = fuel_data[selected_fuel]["LHV"]
-fuel_price = fuel_data[selected_fuel]["Price"]
-fuel_CI = fuel_data[selected_fuel]["CI"]
+fuel_props = fuel_data[selected_fuel]
+eff = fuel_props.get("eff", 1.0)
 
-burn_rate = energy_MJ_day / (fuel_LHV * 1e3)
-daily_cost = burn_rate * fuel_price
-daily_emissions = energy_MJ_day * fuel_CI / 1e6
+burn_rate = energy_MJ_day / (fuel_props["LHV"] * 1e3 * eff)
+daily_cost = burn_rate * fuel_props["Price"]
+daily_emissions = energy_MJ_day * fuel_props["CI"] / 1e6
 
 # ------------------------
 # Display Results
@@ -59,37 +58,26 @@ col_c.metric("CO₂e Emissions (tons/day)", f"{daily_emissions:.2f}")
 st.markdown("---")
 
 # ------------------------
-# Tabs with Plotly Charts
+# Plotly Tabs
 # ------------------------
 tab1, tab2, tab3 = st.tabs(["💸 Cost Sensitivity", "🌍 Emissions", "⚙️ Burn Rate"])
 
-# Tab 1 - Cost Sensitivity
 with tab1:
     st.subheader("Daily Cost Comparison at 3 Price Points ($/ton)")
     price_levels = [400, 800, 1200]
     data = []
-
-    for fuel in fuel_data:
-        lhv = fuel_data[fuel]['LHV']
-        burn = energy_MJ_day / (lhv * 1e3)
+    for fuel, props in fuel_data.items():
+        eff = props.get("eff", 1.0)
+        lhv = props["LHV"]
         for price in price_levels:
-            data.append({
-                "Fuel": fuel,
-                "Price ($/ton)": f"${price}",
-                "Daily Cost ($)": burn * price
-            })
+            burn = energy_MJ_day / (lhv * 1e3 * eff)
+            data.append({"Fuel": fuel, "Price ($/ton)": f"${price}", "Daily Cost ($)": burn * price})
 
     df = pd.DataFrame(data)
-
     fig = go.Figure()
-
     for price in price_levels:
         subset = df[df["Price ($/ton)"] == f"${price}"]
-        fig.add_trace(go.Bar(
-            x=subset["Fuel"],
-            y=subset["Daily Cost ($)"],
-            name=f"${price}/ton",
-        ))
+        fig.add_trace(go.Bar(x=subset["Fuel"], y=subset["Daily Cost ($)"], name=f"${price}/ton"))
 
     fig.update_layout(
         barmode="group",
@@ -101,32 +89,25 @@ with tab1:
         template="plotly_white",
         legend=dict(orientation="h", y=-0.3, x=0.5, xanchor="center", font=dict(size=10))
     )
-
     st.plotly_chart(fig, use_container_width=True)
 
-
-# Tab 2 - Emissions
 with tab2:
-    emissions = {
-        fuel: energy_MJ_day * fuel_data[fuel]["CI"] / 1e6
-        for fuel in fuel_data
-    }
+    emissions = {fuel: energy_MJ_day * props["CI"] / 1e6 for fuel, props in fuel_data.items()}
     fig2 = go.Figure([go.Bar(x=list(emissions.keys()), y=list(emissions.values()))])
     fig2.update_layout(
         title="CO₂e Emissions per Fuel (tons/day)",
         xaxis_title="Fuel",
         yaxis_title="Emissions (tons/day)",
         height=400,
-        width=700,
+        width=720,
         template="plotly_white"
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-# Tab 3 - Burn Rate
 with tab3:
     burns = {
-        fuel: energy_MJ_day / (fuel_data[fuel]["LHV"] * 1e3)
-        for fuel in fuel_data
+        fuel: energy_MJ_day / (props["LHV"] * 1e3 * props.get("eff", 1.0))
+        for fuel, props in fuel_data.items()
     }
     fig3 = go.Figure([go.Bar(x=list(burns.keys()), y=list(burns.values()))])
     fig3.update_layout(
@@ -134,7 +115,7 @@ with tab3:
         xaxis_title="Fuel",
         yaxis_title="Burn Rate (tons/day)",
         height=400,
-        width=700,
+        width=720,
         template="plotly_white"
     )
     st.plotly_chart(fig3, use_container_width=True)
