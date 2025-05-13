@@ -37,6 +37,13 @@ tab1, tab2 = st.tabs(["📊 Module 1: Fuel Calculator", "💥 Module 2: Switch o
 # ------------------------
 with tab1:
     st.header("📊 Fuel Cost & Emissions Calculator")
+if st.session_state["used_module_1"]:
+        st.warning("🔒 You've reached the free-use limit for this module.")
+        st.markdown(
+            "👉 To unlock full access, [**subscribe here**](https://buy.stripe.com/00geXhgI85Yn5uUbII).",
+            unsafe_allow_html=True
+        )
+    else:
     selected_fuel = st.selectbox("Select Fuel", list(fuel_data.keys()))
     props = fuel_data[selected_fuel]
     eff = props.get("eff", 1.0)
