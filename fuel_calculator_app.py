@@ -1,6 +1,3 @@
-from pathlib import Path
-
-clean_fixed_app_code = """
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -22,14 +19,15 @@ fuel_data = {
 }
 
 # ------------------------
-# Session State Setup
+# Session Setup
 # ------------------------
-MAX_USES = 4
 st.set_page_config(page_title="Marine Fuel Tool", layout="wide")
+MAX_USES = 4
 
-for key in ["module_1_uses", "module_2_uses"]:
-    if key not in st.session_state:
-        st.session_state[key] = 0
+if "module_1_uses" not in st.session_state:
+    st.session_state["module_1_uses"] = 0
+if "module_2_uses" not in st.session_state:
+    st.session_state["module_2_uses"] = 0
 
 # ------------------------
 # Shared Inputs
@@ -164,8 +162,3 @@ with tab2:
 # ------------------------
 st.markdown("<hr>", unsafe_allow_html=True)
 st.caption("🄯 This Software was developed by The Carbon Shift, all rights reserved.")
-"""
-
-Path("/mnt/data/final_clean_app.py").write_text(clean_fixed_app_code)
-"/mnt/data/final_clean_app.py"
-
