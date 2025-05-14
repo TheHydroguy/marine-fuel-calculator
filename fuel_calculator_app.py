@@ -19,16 +19,18 @@ fuel_data = {
 }
 
 # ------------------------
-# Session & Setup
+# Session State Setup
 # ------------------------
 MAX_USES = 4
 st.set_page_config(page_title="Marine Fuel Tool", layout="wide")
 
-if "module_1_uses" not in st.session_state:
-    st.session_state["module_1_uses"] = 0
-if "module_2_uses" not in st.session_state:
-    st.session_state["module_2_uses"] = 0
+for key in ["module_1_uses", "module_2_uses", "module_1_triggered", "module_2_triggered"]:
+    if key not in st.session_state:
+        st.session_state[key] = 0 if "uses" in key else False
 
+# ------------------------
+# Shared Inputs
+# ------------------------
 st.sidebar.header("🛠️ Ship Specs")
 ship_power = st.sidebar.number_input("Ship Power (MW)", 1.0, 100.0, 60.0)
 operation_hours = st.sidebar.number_input("Hours per Day", 1, 24, 24)
@@ -50,6 +52,10 @@ with tab1:
         st.markdown("👉 [**Subscribe here**](https://buy.stripe.com/00geXhgI85Yn5uUbII)", unsafe_allow_html=True)
     else:
         if st.button("Run Module 1"):
+            st.session_state["module_1_triggered"] = True
+            st.session_state["module_1_uses"] += 1
+
+        if st.session_state["module_1_triggered"]:
             selected_fuel = st.selectbox("Select Fuel", list(fuel_data.keys()))
             props = fuel_data[selected_fuel]
             eff = props.get("eff", 1.0)
@@ -71,8 +77,6 @@ with tab1:
             fig.update_layout(title="Daily Cost vs Fuel Price", xaxis_title="$/ton", yaxis_title="Total Cost ($)", height=400)
             st.plotly_chart(fig, use_container_width=True)
 
-            st.session_state["module_1_uses"] += 1
-
 # ------------------------
 # Module 2
 # ------------------------
@@ -84,6 +88,10 @@ with tab2:
         st.markdown("👉 [**Subscribe here**](https://buy.stripe.com/00geXhgI85Yn5uUbII)", unsafe_allow_html=True)
     else:
         if st.button("Run Module 2"):
+            st.session_state["module_2_triggered"] = True
+            st.session_state["module_2_uses"] += 1
+
+        if st.session_state["module_2_triggered"]:
             ci_reduction = st.slider("CI Reduction Target (%)", 0, 40, 4)
             carbon_fee = st.number_input("Carbon Fee ($/ton CO₂e)", value=380)
             ci_target = 93.3 * (1 - ci_reduction / 100)
@@ -137,8 +145,6 @@ with tab2:
                 legend=dict(orientation="h", y=-0.3, x=0.5, xanchor="center")
             )
             st.plotly_chart(fig, use_container_width=True)
-
-            st.session_state["module_2_uses"] += 1
 
 # ------------------------
 # Footer
