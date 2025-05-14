@@ -1,3 +1,6 @@
+from pathlib import Path
+
+final_app_with_usage_limiter = """
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -19,14 +22,18 @@ fuel_data = {
 }
 
 # ------------------------
-# Setup + Session Flags
+# Session Control
+# ------------------------
+MAX_USES = 4
+if "module_1_uses" not in st.session_state:
+    st.session_state["module_1_uses"] = 0
+if "module_2_uses" not in st.session_state:
+    st.session_state["module_2_uses"] = 0
+
+# ------------------------
+# Setup
 # ------------------------
 st.set_page_config(page_title="Marine Fuel App", layout="wide")
-if "used_module_1" not in st.session_state:
-    st.session_state["used_module_1"] = False
-if "used_module_2" not in st.session_state:
-    st.session_state["used_module_2"] = False
-
 st.sidebar.header("🛠️ Ship Specs")
 ship_power = st.sidebar.number_input("Ship Power (MW)", 1.0, 100.0, 60.0)
 operation_hours = st.sidebar.number_input("Hours per Day", 1, 24, 24)
@@ -43,12 +50,9 @@ tab1, tab2 = st.tabs(["📊 Module 1: Fuel Calculator", "💥 Module 2: Switch o
 with tab1:
     st.header("📊 Fuel Cost & Emissions Calculator")
 
-    if st.session_state["used_module_1"]:
-        st.warning("🔒 You've reached the free-use limit for this module.")
-        st.markdown(
-            "👉 To unlock full access, [**subscribe here**](https://buy.stripe.com/00geXhgI85Yn5uUbII).",
-            unsafe_allow_html=True
-        )
+    if st.session_state["module_1_uses"] >= MAX_USES:
+        st.warning("🔒 You've reached the limit for this module (4 free uses).")
+        st.markdown("👉 [**Subscribe here**](https://buy.stripe.com/00geXhgI85Yn5uUbII)", unsafe_allow_html=True)
     else:
         selected_fuel = st.selectbox("Select Fuel", list(fuel_data.keys()))
         props = fuel_data[selected_fuel]
@@ -85,7 +89,7 @@ with tab1:
             fig3.update_layout(title="Burn Rate by Fuel", yaxis_title="tons/day", height=400)
             st.plotly_chart(fig3, use_container_width=True)
 
-        st.session_state["used_module_1"] = True
+        st.session_state["module_1_uses"] += 1
 
 # ------------------------
 # Module 2
@@ -93,12 +97,9 @@ with tab1:
 with tab2:
     st.header("💥 Switch or Pay (IMO Tier 2 Corrected)")
 
-    if st.session_state["used_module_2"]:
-        st.warning("🔒 You've reached the free-use limit for this module.")
-        st.markdown(
-            "👉 To unlock full access, [**subscribe here**](https://buy.stripe.com/00geXhgI85Yn5uUbII).",
-            unsafe_allow_html=True
-        )
+    if st.session_state["module_2_uses"] >= MAX_USES:
+        st.warning("🔒 You've reached the limit for this module (4 free uses).")
+        st.markdown("👉 [**Subscribe here**](https://buy.stripe.com/00geXhgI85Yn5uUbII)", unsafe_allow_html=True)
     else:
         ci_reduction = st.slider("CI Reduction Target (%)", 0, 40, 4)
         carbon_fee = st.number_input("Carbon Fee ($/ton CO₂e)", value=380)
@@ -154,4 +155,9 @@ with tab2:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        st.session_state["used_module_2"] = True
+        st.session_state["module_2_uses"] += 1
+"""
+
+path = Path("/mnt/data/final_app_limited_uses.py")
+path.write_text(final_app_with_usage_limiter)
+path.name
